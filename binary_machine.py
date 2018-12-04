@@ -11,6 +11,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 HIDDEN_SIZE = 3
 VISIBLE_SIZE = 10
 SAMPLING_STEP = 5
+LEARNING_RATE = 1e-4
 SAMPLE_SIZE = 30
 RAND_IN = torch.rand(SAMPLE_SIZE, VISIBLE_SIZE, device=device)
 
@@ -58,5 +59,17 @@ class RBM(nn.Module):
         update_hidden = torch.zeros_like(self.bias_hidden, device=device)
         update_visible = torch.zeros_like(self.bias_visible, device=device)
         for i in range(batch_size):
-            update_weight.add(outer_product(v0[i], p_h0_given_v0[i]))
-            
+            update_weight.add(outer_product(v0[i], p_h0_given_v0[i]) - outer_product(vi[i], p_hi_given_vi[i]))
+            update_hidden.add(p_h0_given_v0 - p_hi_given_vi)
+            update_visible.add(v0 - vi)
+        update_visible / batch_size
+        update_hidden / batch_size
+        update_visible / batch_size
+        self.bias_visible.add(self.learning_rate * update_visible)
+        self.bias_hidden.add(self.learning_rate * update_hidden)
+        self.weight.add(self.learning_rate * update_weight)
+
+model = RBM(HIDDEN_SIZE, VISIBLE_SIZE, SAMPLING_STEP, LEARNING_RATE)
+
+model.train_one_step(RAND_IN)
+
