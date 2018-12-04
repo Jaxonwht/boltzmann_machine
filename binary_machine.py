@@ -14,8 +14,14 @@ SAMPLING_STEP = 5
 SAMPLE_SIZE = 30
 RAND_IN = torch.rand(SAMPLE_SIZE, VISIBLE_SIZE, device=device)
 
-class RBM:
-    def __init__(self, H, V, k):
+def outer_product(x, y):
+    return x.view(-1, 1).mm(y.view(1, -1))
+
+class RBM(nn.Module):
+    def __init__(self, H, V, k, lr):
+        super().__init__()
+        self.learning_rate = lr
+        self.sample_step = k
         self.bias_hidden = torch.zeros(H, device=device)
         self.bias_visible = torch.zeros(V, device=device)
         self.weight = torch.zeros(V, H, device=device)
@@ -42,10 +48,15 @@ class RBM:
         return p_v_given_h, torch.bernoulli(p_v_given_h)
 
     def train_one_step(self, v0):
+        batch_size = v0.size()[0]
         p_h0_given_v0, h0 = self.sample_h(v0)
-        hi = torch.tensor(h0)
-        for i in range(k):
+        hi = torch.tensor(h0, device=device)
+        for i in range(self.sample_step):
             _, vi = self.sample_v(hi)
             p_hi_given_vi, hi = self.sample_h(vi)
-        update = v0.t().mm(p_h0_given_v0) - vi.t().mm(p_hi_given_vi)
-        self.weight
+        update_weight = torch.zeros_like(self.weight, device=device)
+        update_hidden = torch.zeros_like(self.bias_hidden, device=device)
+        update_visible = torch.zeros_like(self.bias_visible, device=device)
+        for i in range(batch_size):
+            update_weight.add(outer_product(v0[i], p_h0_given_v0[i]))
+            
